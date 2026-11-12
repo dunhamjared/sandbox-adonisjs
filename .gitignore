@@ -1,0 +1,14 @@
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Dependencies and build outputs
+node_modules/
+dist/
+
+# Environment variables and secrets
+.env
+
+# Ignore all log files except one
+*.log
+!important.log
