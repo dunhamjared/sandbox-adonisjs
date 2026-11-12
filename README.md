@@ -2,17 +2,21 @@
 
 This repo has many branches testing different versions, issues, bugs, and features related to AdonisJS.
 
-## Branch: `assembler-filesystem-race-condition`
+This branch (`assembler-filesystem-race-condition`) documents and reproduces a filesystem race condition in `@adonisjs/assembler` (`copyFiles` during `node ace build`).
 
-This branch documents and reproduces a filesystem race condition in `@adonisjs/assembler` (`copyFiles` during `node ace build`).
-
-### Reproduction Environment
-- `@adonisjs/assembler`: `>= 8.5.2` / tested on `8.6.0`
+### Environment
+- Branch: `assembler-filesystem-race-condition`
+- `@adonisjs/assembler`: `>= 8.5.2` (tested on `8.6.0`)
 - Node.js: `24.x`
-- Filesystem: Bind-mounted / virtualized filesystems (Docker Desktop on macOS with VirtioFS, DevContainers, WSL2, 9p, gRPC-FUSE).
+- Filesystem: Virtualized / bind-mounted (Docker Desktop on macOS with VirtioFS, DevContainers, WSL2)
 
-### Quick Repro with Docker
+### Steps to Reproduce
+
+Run from the repository root:
+
 ```bash
+git checkout assembler-filesystem-race-condition
+
 docker run --rm -v "$(pwd)/repro-enotdir":/app -v /app/node_modules -w /app node:24 sh -c "
 npm install &&
 for i in \$(seq 1 30); do
@@ -22,20 +26,27 @@ done
 "
 ```
 
-### Problem & Fix
-In `@adonisjs/assembler`, `copyFiles` uses `filePaths.map` + `Promise.all` calling `mkdir(dirname(dest), { recursive: true })` concurrently for every file sharing the destination directory tree. On virtualized filesystem drivers, concurrent directory lookups and creations trigger `ENOTDIR` before the directory inode finishes linking.
+*(Or inside a DevContainer / WSL: `cd repro-enotdir && npm i && for i in $(seq 1 30); do node ace build || break; done`)*
 
-Pre-creating unique target directories sequentially before running `Promise.all(copyPromises)` eliminates the collision.
+#### Expected Failure (usually within ~10 runs)
+```text
+ℹ Error: ENOTDIR: not a directory, mkdir '/app/build/resources'
+ ⁃ at async mkdir (node:internal/fs/promises:1571:10)
+ ⁃ (async file://node_modules/@adonisjs/assembler/build/utils-QbfbfSOx.js:991:3)
+ ⁃ at async copyFiles (node_modules/@adonisjs/assembler/build/utils-QbfbfSOx.js:994:9)
+```
+
+### Problem & Possible Fix
+In `@adonisjs/assembler`, `copyFiles` uses `filePaths.map` + `Promise.all` calling `mkdir(dirname(dest), { recursive: true })` concurrently for every file sharing the destination directory tree. On virtualized filesystem drivers, concurrent lookups/creations trigger `ENOTDIR` before the directory inode finishes linking.
+
+Pre-creating unique target directories sequentially before `Promise.all(copyPromises)` eliminates the collision.
 
 ---
 
 ### AI Disclosure
 
-**Why AI was used:**
-AI was used to accelerate reproducing, testing, and isolating this filesystem race condition across host and virtualized/bind-mounted environments. Because filesystem race conditions are timing- and environment-dependent, automated tooling helped rapidly validate whether the issue reproduces on native filesystems versus virtualized bind mounts (Docker/VirtioFS) and stress-test candidate solutions across repeated build loops.
+**Human Note (Jared):**  
+I found this issue while building within a monorepo in a vscode devcontainer. I did some debugging myself, but then used AI to help run tests and find the root cause.  
 
-**How AI was used:**
-- Bootstrapped and configured the minimal AdonisJS reproduction project (`repro-enotdir`) with the exact `metaFiles` configuration.
-- Set up and executed isolated container build loops to reproduce the `ENOTDIR` / `ENOENT` collisions under Docker Desktop's VirtioFS.
-- Inspected `@adonisjs/assembler`'s `copyFiles` implementation, tested a deduplicated sequential directory creation patch across 30 build cycles, and reverted it back to reproduce the bug.
-- Generated documentation and reproduction instructions for this repository.
+**AI-Generated Statement:**  
+AI was used to isolate, reproduce, and test this timing-dependent race condition across native and virtualized (Docker/VirtioFS) filesystems.
