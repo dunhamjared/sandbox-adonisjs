@@ -49,4 +49,4 @@ Pre-creating unique target directories sequentially before `Promise.all(copyProm
 I found this issue while building within a monorepo in a vscode devcontainer. I did some debugging myself, but then used AI to help run tests and find the root cause.  
 
 **AI-Generated Statement:**  
-AI was used to isolate, reproduce, and test this timing-dependent race condition across native and virtualized (Docker/VirtioFS) filesystems.
+AI was used to help create this reproduction repository, isolate the timing-dependent race condition, and test it across native and virtualized (Docker/VirtioFS) filesystems.
