@@ -8,7 +8,7 @@ This branch (`assembler-filesystem-race-condition`) documents and reproduces a f
 - Branch: `assembler-filesystem-race-condition`
 - `@adonisjs/assembler`: `>= 8.5.2` (tested on `8.6.0`)
 - Node.js: `24.x`
-- Filesystem: Virtualized / bind-mounted (Docker Desktop on macOS with VirtioFS, DevContainers, WSL2)
+- Filesystem: Host <--> VM virtualized mounts (Docker Desktop / DevContainers on macOS or Windows with VirtioFS, gRPC-FUSE, or WSL2. Will not reproduce on native host filesystems or native Linux Docker mounts)
 
 ### Steps to Reproduce
 
