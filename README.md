@@ -36,10 +36,11 @@ done
  ⁃ at async copyFiles (node_modules/@adonisjs/assembler/build/utils-QbfbfSOx.js:994:9)
 ```
 
-### Problem & Possible Fix
-In `@adonisjs/assembler`, `copyFiles` uses `filePaths.map` + `Promise.all` calling `mkdir(dirname(dest), { recursive: true })` concurrently for every file sharing the destination directory tree. On virtualized filesystem drivers, concurrent lookups/creations trigger `ENOTDIR` before the directory inode finishes linking.
+### Suspected Cause
+In `@adonisjs/assembler` (`src/utils.ts`), `copyFiles` runs `filePaths.map` inside `Promise.all`, calling `mkdir(dirname(dest), { recursive: true })` concurrently for every matched file. When multiple files share the same nested destination path on a virtualized filesystem mount, these concurrent `mkdir` calls appear to race and intermittently fail with `ENOTDIR`.
 
-Pre-creating unique target directories sequentially before `Promise.all(copyPromises)` eliminates the collision.
+### Possible Fix
+In local testing, deduplicating and creating the target directories before running `Promise.all` to copy the files prevented the error across all 30 build runs.
 
 ---
 
